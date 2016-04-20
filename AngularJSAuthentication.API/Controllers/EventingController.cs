@@ -2,25 +2,28 @@
 using AngularJSAuthentication.API.Models;
 using System.Web.Http;
 using System.Data;
-using System.Web.Mvc;
 using Utilities;
 using System;
 using H = System.Web.Http;
-using System.Web.Script.Serialization;
 using DataAccessLayer;
+using Microsoft.Practices.EnterpriseLibrary.Caching;
+using Microsoft.Practices.EnterpriseLibrary.Caching.Expirations;
 
 namespace AngularJSAuthentication.API.Controllers
 {
+    
     [H.RoutePrefix("api/Eventing")]
     public class EventingController : ApiController
     {
         DataTableProcesses dataTableProcesses;
         EventManager eventManager;
+        ICacheManager _objCacheManager;
 
         public EventingController()
         {
             dataTableProcesses = new DataTableProcesses();
             eventManager = new EventManager();
+            _objCacheManager = EnterpriseCache.Instance;
         }
 
         public List<EventDetails> GetEventDetails()
@@ -81,16 +84,27 @@ namespace AngularJSAuthentication.API.Controllers
         {
             try
             {
-                string from = "";   // Replace with your "From" address. This address must be verified.
-                string to = "";  // Replace with a "To" address. If your account is still in the
-                                          // sandbox, this address must be verified.
+                string from = "shanmugamcse@gmail.com";   // Replace with your "From" address. This address must be verified.
+                string to = toAddress;  // Replace with a "To" address. If your account is still in the
+                                        // sandbox, this address must be verified.
 
-                string subject = "OTP For your Login";
-                string body = new Guid().ToString();
+                string cacheKey = new Guid().ToString();
+                string otp = GenerateOTP();
+
+                _objCacheManager.Add(cacheKey, otp);
+
+                SlidingTime _objSlidingTime = new SlidingTime(TimeSpan.FromMinutes(10));
+                _objCacheManager.Add(cacheKey, otp, CacheItemPriority.Normal, null, _objSlidingTime);
+
+                bool test = ValidateUser(cacheKey, otp);
+
+                string subject = "OTP For Bulletin Registration";
+
+                string body = "Your OTP to install the bulletin App is " + otp + ". This is valid only for next 10 mins.";
 
                 // Supply your SMTP credentials below. Note that your SMTP credentials are different from your AWS credentials.
-                const String SMTP_USERNAME = "";  // Replace with your SMTP username. 
-                const String SMTP_PASSWORD = "";  // Replace with your SMTP password.
+                const String SMTP_USERNAME = "AKIAIVJWSJ6LMD5EPQKQ";  // Replace with your SMTP username. 
+                const String SMTP_PASSWORD = "AhlN7kt4ftjjACNtyTHO8k1SGaAfO1VduEXd0yu9ceUg";  // Replace with your SMTP password.
 
                 // Amazon SES SMTP host name. This example uses the US West (Oregon) region.
                 const String HOST = "email-smtp.us-west-2.amazonaws.com";
@@ -127,6 +141,26 @@ namespace AngularJSAuthentication.API.Controllers
                 //Console.ReadKey();
             }
             catch (Exception ex) { }
+        }
+
+        private string GenerateOTP()
+        {
+            Random generator = new Random();
+            string otpValue = generator.Next(100000, 999999).ToString();
+
+            return otpValue;
+        }
+
+        public bool ValidateUser(string guid, string userEnteredOTP)
+        {
+            if (_objCacheManager.Contains(guid))
+            {
+                string generatedOTP = _objCacheManager.GetData(guid).ToString();
+                if (userEnteredOTP == generatedOTP)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

@@ -20,7 +20,7 @@ namespace DataAccessLayer
             {
                 eventDetails = new DataTable();
                 connection = new SqlConnection();
-                connection.ConnectionString = @"";
+                connection.ConnectionString = @"Data Source= bulletindb.cejqphutrszw.us-west-2.rds.amazonaws.com;Initial Catalog=bulletin;Persist Security Info=True;User ID=sa;Password=9942924839";
                 command = new SqlCommand();
                 command.Connection = connection;
                 command.CommandType = CommandType.Text;
@@ -48,7 +48,22 @@ namespace DataAccessLayer
         /// <returns></returns>
         public DataTable GetEventDetails(int eventID)
         {
-            eventDetails = GetEventDetailsForQuery("select * from EventDetails where eventId = '" + eventID + "'");
+            try
+            {
+                string sqlCom = "select * from EventDetails where eventId = @eventID";
+                connection.Open();
+                SqlCommand cmd = new SqlCommand(sqlCom, connection);
+                cmd.Parameters.Add("@eventID", System.Data.SqlDbType.Date);
+                cmd.Parameters["@eventID"].Value = eventID;
+                SqlDataReader reader = cmd.ExecuteReader();
+                if (reader.HasRows)
+                    eventDetails.Load(reader);
+                if (connection.State == ConnectionState.Open)
+                    connection.Close();
+            }
+            catch (SqlException sqlEx)
+            { }
+            catch (Exception ex) { }
             return eventDetails;
         }
 

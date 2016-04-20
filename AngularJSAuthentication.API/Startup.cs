@@ -1,15 +1,13 @@
-﻿using AngularJSAuthentication.API.Providers;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Owin;
-using Microsoft.Owin.Security.Facebook;
-using Microsoft.Owin.Security.Google;
-using Microsoft.Owin.Security.OAuth;
 using Owin;
-using System;
-using System.Collections.Generic;
-using System.Data.Entity;
-using System.Linq;
-using System.Web;
+using Microsoft.Owin.Security.Cookies;
+using Microsoft.AspNet.Identity;
+using Microsoft.Owin.Security.OAuth;
+using Microsoft.AspNet.Identity.EntityFramework;
 using System.Web.Http;
+using AngularJSAuthentication.API.Providers;
 
 [assembly: OwinStartup(typeof(AngularJSAuthentication.API.Startup))]
 
@@ -17,61 +15,61 @@ namespace AngularJSAuthentication.API
 {
     public class Startup
     {
-        public static OAuthBearerAuthenticationOptions OAuthBearerOptions { get; private set; }
-        public static GoogleOAuth2AuthenticationOptions googleAuthOptions { get; private set; }
-        public static FacebookAuthenticationOptions facebookAuthOptions { get; private set; }
-
         public void Configuration(IAppBuilder app)
         {
-            HttpConfiguration config = new HttpConfiguration();
-
-            ConfigureOAuth(app);
-
+            var config = new HttpConfiguration();
             WebApiConfig.Register(config);
-            app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
             app.UseWebApi(config);
-            Database.SetInitializer(new MigrateDatabaseToLatestVersion<AuthContext, AngularJSAuthentication.API.Migrations.Configuration>());
+            
+            PublicClientId = "self";
 
+            UserManagerFactory = () => new UserManager<IdentityUser>(new UserStore<IdentityUser>());
+
+            OAuthOptions = new OAuthAuthorizationServerOptions
+            {
+                TokenEndpointPath = new PathString("/Token"),
+                Provider = new ApplicationOAuthProvider(PublicClientId, UserManagerFactory),
+                AuthorizeEndpointPath = new PathString("/api/Account/ExternalLogin"),
+                AccessTokenExpireTimeSpan = TimeSpan.FromDays(14),
+                AllowInsecureHttp = true
+            };
+
+            app.UseOAuthBearerTokens(OAuthOptions);
+
+            ConfigureAuth(app);
         }
 
-        public void ConfigureOAuth(IAppBuilder app)
+        public static OAuthAuthorizationServerOptions OAuthOptions { get; private set; }
+
+        public static Func<UserManager<IdentityUser>> UserManagerFactory { get; set; }
+
+        public static string PublicClientId { get; private set; }
+
+        // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
+        public void ConfigureAuth(IAppBuilder app)
         {
-            //use a cookie to temporarily store information about a user logging in with a third party login provider
-            app.UseExternalSignInCookie(Microsoft.AspNet.Identity.DefaultAuthenticationTypes.ExternalCookie);
-            OAuthBearerOptions = new OAuthBearerAuthenticationOptions();
+            // Enable the application to use a cookie to store information for the signed in user
+            // and to use a cookie to temporarily store information about a user logging in with a third party login provider
+            app.UseCookieAuthentication(new CookieAuthenticationOptions());
+            app.UseExternalSignInCookie(DefaultAuthenticationTypes.ExternalCookie);
 
-            OAuthAuthorizationServerOptions OAuthServerOptions = new OAuthAuthorizationServerOptions() {
-            
-                AllowInsecureHttp = true,
-                TokenEndpointPath = new PathString("/token"),
-                AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(30),
-                Provider = new SimpleAuthorizationServerProvider(),
-                RefreshTokenProvider = new SimpleRefreshTokenProvider()
-            };
+            // Enable the application to use bearer tokens to authenticate users
+            app.UseOAuthBearerTokens(OAuthOptions);
 
-            // Token Generation
-            app.UseOAuthAuthorizationServer(OAuthServerOptions);
-            app.UseOAuthBearerAuthentication(OAuthBearerOptions);
+            // Uncomment the following lines to enable logging in with third party login providers
+            //app.UseMicrosoftAccountAuthentication(
+            //    clientId: "",
+            //    clientSecret: "");
 
-            //Configure Google External Login
-            googleAuthOptions = new GoogleOAuth2AuthenticationOptions()
-            {
-                ClientId = "xxxxxx",
-                ClientSecret = "xxxxxx"
-                //Provider = new GoogleAuthProvider()
-            };
-            app.UseGoogleAuthentication(googleAuthOptions);
+            //app.UseTwitterAuthentication(
+            //    consumerKey: "",
+            //    consumerSecret: "");
 
-            //Configure Facebook External Login
-            facebookAuthOptions = new FacebookAuthenticationOptions()
-            {
-                AppId = "xxxxxx",
-                AppSecret = "xxxxxx"
-                //Provider = new FacebookAuthProvider()
-            };
-            app.UseFacebookAuthentication(facebookAuthOptions);
+            //app.UseFacebookAuthentication(
+            //    appId: "",
+            //    appSecret: "");
 
+            //app.UseGoogleAuthentication();
         }
     }
-
 }
