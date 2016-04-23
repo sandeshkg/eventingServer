@@ -49,6 +49,15 @@ namespace AngularJSAuthentication.API.Controllers
 
             return eventDetailsList;
         }
+        
+        public List<string> GetEventIdDetails(DateTime date)
+        {
+            List<EventDetails> eventFromCurrentDate = GetEventDetails(date);
+            List<string> EventId = new List<string>();
+            foreach (var temp in eventFromCurrentDate)
+                EventId.Add(temp.id.ToString());
+            return EventId;
+        }
 
         public List<EventDetails> EventDetailEntities(DataTable eventDetails)
         {
