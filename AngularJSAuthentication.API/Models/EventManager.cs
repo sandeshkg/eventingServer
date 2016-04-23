@@ -18,4 +18,9 @@ namespace AngularJSAuthentication.API.Models
         public string type { get; set; }
         public string duration { get; set; }
     }
+    public class SpecEventDetails
+    {
+        public int id { get; set; }
+        public string lastUpdateOn { get; set; }
+    }
 }
