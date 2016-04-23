@@ -50,13 +50,11 @@ namespace AngularJSAuthentication.API.Controllers
             return eventDetailsList;
         }
         
-        public List<string> GetEventIdDetails(DateTime date)
+        public List<SpecEventDetails> GetEventIdDetails(DateTime date)
         {
-            List<EventDetails> eventFromCurrentDate = GetEventDetails(date);
-            List<string> EventId = new List<string>();
-            foreach (var temp in eventFromCurrentDate)
-                EventId.Add(temp.id.ToString());
-            return EventId;
+            DataTable eventDetails = eventManager.GetEventDetails(date);
+            List<SpecEventDetails> eventDetailsList = EventDetailForIdDate(eventDetails);
+            return eventDetailsList; 
         }
 
         public List<EventDetails> EventDetailEntities(DataTable eventDetails)
@@ -79,6 +77,28 @@ namespace AngularJSAuthentication.API.Controllers
                         venue = dataTableProcesses.GetThisColumnValue("eventVenue", row),
                         iconImageURL = dataTableProcesses.GetThisColumnValue("eventDspPic", row),
                         duration = dataTableProcesses.GetThisColumnValue("eventDuration", row)
+                    };
+
+                    eventDetailsEntity.Add(eventDetail);
+                }
+            }
+
+            return eventDetailsEntity;
+        }
+
+public List<SpecEventDetails> EventDetailForIdDate(DataTable eventDetails)
+        {
+            List<SpecEventDetails> eventDetailsEntity = new List<SpecEventDetails>();
+            if (eventDetails != null && eventDetails.Rows.Count > 0)
+            {
+                foreach (DataRow row in eventDetails.Rows)
+                {
+                    int eventId;
+
+                    SpecEventDetails eventDetail = new SpecEventDetails
+                    {
+                        id = int.TryParse(dataTableProcesses.GetThisColumnValue("eventId", row), out eventId) ? Convert.ToInt16(dataTableProcesses.GetThisColumnValue("eventId", row)) : 0,
+                        lastUpdateOn = dataTableProcesses.GetThisColumnValue("lstupdatetime", row)
                     };
 
                     eventDetailsEntity.Add(eventDetail);
